@@ -103,8 +103,18 @@ type BuildOption struct {
 	Include []string `url:"include,omitempty,comma"`
 }
 
-type buildsResponse struct {
-	Builds []*Build `json:"builds"`
+type OffsetLimit struct {
+	Offset uint `json:"offset"`
+	Limit  uint `json:"limit"`
+}
+type Pagination struct {
+	Next   OffsetLimit `json:"next"`
+	IsLast bool        `json:"is_last"`
+}
+
+type BuildsResponse struct {
+	Pagination Pagination `json:"@pagination"`
+	Builds     []*Build   `json:"builds"`
 }
 
 // buildResponse is only used to parse responses from Restart, Cancel
@@ -173,7 +183,7 @@ func (bs *BuildsService) List(ctx context.Context, opt *BuildsOption) ([]*Build,
 		return nil, nil, err
 	}
 
-	var br buildsResponse
+	var br BuildsResponse
 	resp, err := bs.client.Do(ctx, req, &br)
 	if err != nil {
 		return nil, resp, err
@@ -196,7 +206,7 @@ func (bs *BuildsService) ListByRepoId(ctx context.Context, repoId uint, opt *Bui
 		return nil, nil, err
 	}
 
-	var br buildsResponse
+	var br BuildsResponse
 	resp, err := bs.client.Do(ctx, req, &br)
 	if err != nil {
 		return nil, resp, err
@@ -208,7 +218,7 @@ func (bs *BuildsService) ListByRepoId(ctx context.Context, repoId uint, opt *Bui
 // ListByRepoSlug fetches current user's builds based on the repository slug and options
 //
 // Travis CI API docs: https://developer.travis-ci.com/resource/builds#find
-func (bs *BuildsService) ListByRepoSlug(ctx context.Context, repoSlug string, opt *BuildsByRepoOption) ([]*Build, *http.Response, error) {
+func (bs *BuildsService) ListByRepoSlug(ctx context.Context, repoSlug string, opt *BuildsByRepoOption) (*BuildsResponse, *http.Response, error) {
 	u, err := urlWithOptions(fmt.Sprintf("repo/%s/builds", url.QueryEscape(repoSlug)), opt)
 	if err != nil {
 		return nil, nil, err
@@ -219,13 +229,13 @@ func (bs *BuildsService) ListByRepoSlug(ctx context.Context, repoSlug string, op
 		return nil, nil, err
 	}
 
-	var br buildsResponse
+	var br BuildsResponse
 	resp, err := bs.client.Do(ctx, req, &br)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return br.Builds, resp, err
+	return &br, resp, err
 }
 
 // Cancel cancels a build based on the provided build id
